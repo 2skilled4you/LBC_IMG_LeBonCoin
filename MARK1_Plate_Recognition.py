@@ -5,16 +5,14 @@ from skimage.io import imread
 from skimage.filters import threshold_otsu
 import matplotlib.pyplot as plt
 
+# Importation unitaire de l'image
 strImgPath = "C:/Users/Bernard/Documents/Python Scripts/Plate_Recognition_IMG/02. Collecte/02. ImageVeh/"
 strImgName = "2019-01-28-17-18-29-071886.png"
 car_image = imread(strImgPath + strImgName, as_grey=True)
-# it should be a 2 dimensional array
+# Normalement 2d array
 print(car_image.shape)
 
-# the next line is not compulsory however, a grey scale pixel
-# in skimage ranges between 0 & 1. multiplying it with 255
-# will make it range between 0 & 255 (something we can relate better with
-
+# Visualisation rapide en noir et blanc de l'image
 gray_car_image = car_image * 255
 fig, (ax1, ax2) = plt.subplots(1, 2)
 ax1.imshow(gray_car_image, cmap="gray")
@@ -32,22 +30,22 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import localization
 
-# this gets all the connected regions and groups them together
+# groups connected regions them together
 label_image = measure.label(binary_car_image)
 fig, (ax1) = plt.subplots(1)
 ax1.imshow(gray_car_image, cmap="gray");
 
-# regionprops creates a list of properties of all the labelled regions
+# properties
 for region in regionprops(label_image):
     if region.area < 50:
-        #if the region is so small then it's likely not a license plate
+        # si région trop petite, alors ce n'est probablement pas une plaque
         continue
 
     # the bounding box coordinates
     minRow, minCol, maxRow, maxCol = region.bbox
     rectBorder = patches.Rectangle((minCol, minRow), maxCol-minCol, maxRow-minRow, edgecolor="red", linewidth=2, fill=False)
     ax1.add_patch(rectBorder)
-    # let's draw a red rectangle over those regions
+    # visualisation des rectangle de chacune des régions de l'image en rouge
 
 plt.show()
 
@@ -71,17 +69,17 @@ plate_like_objects = []
 fig, (ax1) = plt.subplots(1)
 ax1.imshow(gray_car_image, cmap="gray");
 
-# regionprops creates a list of properties of all the labelled regions
+# properties
 for region in regionprops(label_image):
     if region.area < 50:
-        #if the region is so small then it's likely not a license plate
+        # si région trop petite, alors ce n'est probablement pas une plaque
         continue
 
     # the bounding box coordinates
     min_row, min_col, max_row, max_col = region.bbox
     region_height = max_row - min_row
     region_width = max_col - min_col
-    # ensuring that the region identified satisfies the condition of a typical license plate
+    # on vérifie les conditions de dimensions minimales adaptées pour une plaque d'immatriculation
     if region_height >= min_height and region_height <= max_height and region_width >= min_width and region_width <= max_width and region_width > region_height:
         plate_like_objects.append(binary_car_image[min_row:max_row,
                                   min_col:max_col])
@@ -89,7 +87,7 @@ for region in regionprops(label_image):
                                               max_row, max_col))
         rectBorder = patches.Rectangle((min_col, min_row), max_col-min_col, max_row-min_row, edgecolor="red", linewidth=2, fill=False)
         ax1.add_patch(rectBorder)
-    # let's draw a red rectangle over those regions
+    # On affiche les rectangles précédents avec le respect des dimensions d'une plaque
 
 plt.show()
 
@@ -104,11 +102,6 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 #import cca2
 
-# on the image I'm using, the headlamps were categorized as a license plate
-# because their shapes were similar
-# for now I'll just use the plate_like_objects[2] since I know that's the
-# license plate. We'll fix this later
-
 # The invert was done so as to convert the black pixel to white pixel and vice versa
 license_plate = np.invert(plate_like_objects[2])
 #license_plate = np.invert(cca2.plate_like_objects[1])
@@ -117,10 +110,10 @@ labelled_plate = measure.label(license_plate)
 
 fig, ax1 = plt.subplots(1)
 ax1.imshow(license_plate, cmap="gray")
-# the next two lines is based on the assumptions that the width of
-# a license plate should be between 5% and 15% of the license plate,
-# and height should be between 35% and 60%
-# this will eliminate some
+
+
+# largeur entre 2% and 40%
+# hauteur entre 60% and 90%
 print(license_plate.shape[0], license_plate.shape[1])
 character_dimensions = (0.60*license_plate.shape[0], 0.90*license_plate.shape[0], 0.02*license_plate.shape[1], 0.40*license_plate.shape[1])
 min_height, max_height, min_width, max_width = character_dimensions
@@ -136,16 +129,15 @@ for regions in regionprops(labelled_plate):
     if region_height > min_height and region_height < max_height and region_width > min_width and region_width < max_width:
         roi = license_plate[y0:y1, x0:x1]
 
-        # draw a red bordered rectangle over the character.
+        # on dessine un rectangle pour isoler chacune des lettres de la plaque
         rect_border = patches.Rectangle((x0, y0), x1 - x0, y1 - y0, edgecolor="red",
                                        linewidth=2, fill=False)
         ax1.add_patch(rect_border)
 
-        # resize the characters to 20X20 and then append each character into the characters list
+        # Redimension des lettres en 20X20
         resized_char = resize(roi, (28, 28))
         characters.append(resized_char)
 
-        # this is just to keep track of the arrangement of the characters
         column_list.append(x0)
 
 plt.show()
@@ -203,11 +195,7 @@ def read_training_data(training_directory, imgType):
     return (np.array(image_data), np.array(target_data))
 
 def cross_validation(model, num_of_fold, train_data, train_label):
-    # this uses the concept of cross validation to measure the accuracy
-    # of a model, the num_of_fold determines the type of validation
-    # e.g if num_of_fold is 4, then we are performing a 4-fold cross validation
-    # it will divide the dataset into 4 and use 1/4 of it for testing
-    # and the remaining 3/4 for the training
+
     accuracy_result = cross_val_score(model, train_data, train_label,
                                       cv=num_of_fold)
     print("Cross Validation Result for ", str(num_of_fold), " -fold")
@@ -225,14 +213,12 @@ training_dataset_dir2 = os.path.join(current_dir, '04. Train/HandWrittenData')
 #############################
 image_data, target_data = read_training_data(training_dataset_dir2, allItems)
 
-# the kernel can be 'linear', 'poly' or 'rbf'
-# the probability was set to True so as to show
-# how sure the model is of it's prediction
+# Utilisation d'un modele SVC en prédicition (optimiser plus tard avec CNN)
 svc_model = SVC(kernel='linear', probability=True)
 
 cross_validation(svc_model, 4, image_data, target_data)
 
-# let's train the model with all the input data
+# Train
 svc_model.fit(image_data, target_data)
 
 # Stockage du modèle pour le réutiliser ultérieurement
@@ -244,17 +230,14 @@ joblib.dump(svc_model, save_directory + '/svc_allItems.pkl')
 #############################
 # Modèle dédié aux lettres
 #############################
-#image_data, target_data = read_training_data(training_dataset_dir, letters)
 image_data, target_data = read_training_data(training_dataset_dir2, letters)
 
-# the kernel can be 'linear', 'poly' or 'rbf'
-# the probability was set to True so as to show
-# how sure the model is of it's prediction
+# Utilisation d'un modele SVC en prédicition (optimiser plus tard avec CNN)
 svc_model = SVC(kernel='linear', probability=True)
 
 cross_validation(svc_model, 4, image_data, target_data)
 
-# let's train the model with all the input data
+# Train
 svc_model.fit(image_data, target_data)
 
 # Stockage du modèle pour le réutiliser ultérieurement
@@ -269,14 +252,12 @@ joblib.dump(svc_model, save_directory + '/svc_letters_2.pkl')
 #image_data, target_data = read_training_data(training_dataset_dir, numbers)
 image_data, target_data = read_training_data(training_dataset_dir2, numbers)
 
-# the kernel can be 'linear', 'poly' or 'rbf'
-# the probability was set to True so as to show
-# how sure the model is of it's prediction
+# Utilisation d'un modele SVC en prédicition (optimiser plus tard avec CNN)
 svc_model = SVC(kernel='linear', probability=True)
 
 cross_validation(svc_model, 4, image_data, target_data)
 
-# let's train the model with all the input data
+# Train
 svc_model.fit(image_data, target_data)
 
 # Stockage du modèle pour le réutiliser ultérieurement
@@ -295,14 +276,8 @@ import os
 from sklearn.externals import joblib
 
 current_dir = "C:/Users/Bernard/Documents/Python Scripts/Plate_Recognition_IMG/"
-# load the letter model
-#model_letters_dir = os.path.join(current_dir, '03. Modeles/SVC/svc_letters_2.pkl')
-#model_letters = joblib.load(model_letters_dir)
-#
-## load the number model
-#model_numbers_dir = os.path.join(current_dir, '03. Modeles/SVC/svc_numbers_2.pkl')
-#model_numbers = joblib.load(model_numbers_dir)
 
+# Modélisation sur image avec modèle stocké pour reconnaitre la plaque
 model_dir = os.path.join(current_dir, '03. Modeles/SVC/svc_allItems.pkl')
 model = joblib.load(model_dir)
 
@@ -342,9 +317,7 @@ for eachPredict in classification_result:
 
 print(plate_string)
 
-# it's possible the characters are wrongly arranged
-# since that's a possibility, the column_list will be
-# used to sort the letters in the right order
+# Parfois les caractères de plate_string sont dans le mauvais ordre donc on les trie
 
 column_list_copy = column_list[:]
 column_list.sort()
